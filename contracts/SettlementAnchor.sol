@@ -5,26 +5,29 @@ contract SettlementAnchor {
     mapping(bytes32 => AssetLock) public assetLocks;
 
     struct AssetLock {
-        address owner;
+        address assetContract;
         uint256 amount;
-        bytes32 assetType;
+        address owner;
         bool isLocked;
-        uint256 lockTimestamp;
+        bool isReleased;
     }
 
-    event AssetLocked(bytes32 indexed lockId, address owner, uint256 amount, bytes32 assetType);
-    event AssetReleased(bytes32 indexed lockId, address owner);
+    event AssetLocked(bytes32 indexed settlementId, address assetContract, uint256 amount);
+    event AssetReleased(bytes32 indexed settlementId, address to);
 
-    function lockAsset(bytes32 lockId, uint256 amount, bytes32 assetType) external payable {
-        require(assetLocks[lockId].isLocked == false, "Asset already locked");
-        assetLocks[lockId] = AssetLock(msg.sender, amount, assetType, true, block.timestamp);
-        emit AssetLocked(lockId, msg.sender, amount, assetType);
+    function lockAsset(bytes32 settlementId, address assetContract, uint256 amount) external {
+        require(assetLocks[settlementId].isLocked == false, "Asset already locked");
+        // TODO: Implement ERC20/ETH transfer logic
+        assetLocks[settlementId] = AssetLock(assetContract, amount, msg.sender, true, false);
+        emit AssetLocked(settlementId, assetContract, amount);
     }
 
-    function releaseAsset(bytes32 lockId) external {
-        require(assetLocks[lockId].isLocked, "Asset not locked");
-        require(assetLocks[lockId].owner == msg.sender, "Not the owner");
-        assetLocks[lockId].isLocked = false;
-        emit AssetReleased(lockId, msg.sender);
+    function releaseAsset(bytes32 settlementId, address to) external {
+        AssetLock storage lock = assetLocks[settlementId];
+        require(lock.isLocked, "No asset locked");
+        require(lock.owner == msg.sender, "Not owner");
+        lock.isReleased = true;
+        // TODO: Implement asset transfer to 'to' address
+        emit AssetReleased(settlementId, to);
     }
 }

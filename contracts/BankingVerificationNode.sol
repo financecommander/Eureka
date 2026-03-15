@@ -2,32 +2,28 @@
 pragma solidity ^0.8.0;
 
 contract BankingVerificationNode {
-    mapping(address => Bank) public banks;
-    mapping(bytes32 => FundVerification) public fundVerifications;
+    mapping(address => bool) public verifiedBanks;
 
-    struct Bank {
-        bool isVerified;
-        bytes32 credentialHash;
-        uint256 verificationTimestamp;
+    event BankVerified(address indexed bank);
+
+    address public admin;
+
+    constructor() {
+        admin = msg.sender;
     }
 
-    struct FundVerification {
-        address bank;
-        bytes32 settlementId;
-        bool isVerified;
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Not admin");
+        _;
     }
 
-    event BankVerified(address indexed bank, bytes32 credentialHash);
-    event FundsVerified(bytes32 indexed verificationId, bytes32 settlementId, bool isVerified);
-
-    function verifyBank(address bank, bytes32 credentialHash) external {
-        banks[bank] = Bank(true, credentialHash, block.timestamp);
-        emit BankVerified(bank, credentialHash);
+    function verifyBank(address bank) external onlyAdmin {
+        verifiedBanks[bank] = true;
+        emit BankVerified(bank);
     }
 
-    function verifyFunds(bytes32 verificationId, bytes32 settlementId, bool isVerified) external {
-        require(banks[msg.sender].isVerified, "Not a verified bank");
-        fundVerifications[verificationId] = FundVerification(msg.sender, settlementId, isVerified);
-        emit FundsVerified(verificationId, settlementId, isVerified);
+    function confirmFunds(bytes32 settlementId, address bank) external view returns (bool) {
+        // TODO: Implement funds confirmation logic
+        return verifiedBanks[bank];
     }
 }
