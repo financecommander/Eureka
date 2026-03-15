@@ -1,45 +1,30 @@
 const express = require('express');
 const ethers = require('ethers');
-const app = express();
-const port = process.env.PORT || 3000;
+require('dotenv').config();
 
+const app = express();
 app.use(express.json());
 
-// TODO: Load contract ABIs and addresses from config
+const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
+const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
 app.post('/verify', async (req, res) => {
-    const { settlementId, attorneyAddress } = req.body;
-    try {
-        // TODO: Connect to Ethereum provider
-        // TODO: Call AttorneyVerificationNode.verifySignature
-        res.json({ status: 'verified', settlementId });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+    const { settlementId, verified } = req.body;
+    // TODO: Connect to SettlementVerificationRegistry contract
+    res.status(200).json({ message: 'Verification submitted', settlementId });
 });
 
 app.get('/settlement/:id', async (req, res) => {
     const { id } = req.params;
-    try {
-        // TODO: Connect to Ethereum provider
-        // TODO: Query SettlementVerificationRegistry.settlements
-        res.json({ id, status: 'REGISTERED' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+    // TODO: Fetch settlement data from contract
+    res.status(200).json({ id, status: 'pending' });
 });
 
 app.post('/anchor', async (req, res) => {
-    const { settlementId, asset, amount } = req.body;
-    try {
-        // TODO: Connect to Ethereum provider
-        // TODO: Call SettlementAnchor.lockAsset and anchorSettlement
-        res.json({ status: 'anchored', settlementId });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+    const { settlementId, assetContract, amount } = req.body;
+    // TODO: Call SettlementAnchor.lockAsset
+    res.status(200).json({ message: 'Asset anchored', settlementId });
 });
 
-app.listen(port, () => {
-    console.log(`API server running on port ${port}`);
-});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`API running on port ${PORT}`));
