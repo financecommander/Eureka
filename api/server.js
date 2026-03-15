@@ -1,30 +1,43 @@
 const express = require('express');
 const ethers = require('ethers');
-require('dotenv').config();
-
 const app = express();
+const port = process.env.PORT || 3000;
+
 app.use(express.json());
 
-const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
-const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+// TODO: Initialize ethers provider and contract instances
+const provider = new ethers.providers.JsonRpcProvider(process.env.ETHEREUM_RPC_URL);
 
 app.post('/verify', async (req, res) => {
-    const { settlementId, verified } = req.body;
-    // TODO: Connect to SettlementVerificationRegistry contract
-    res.status(200).json({ message: 'Verification submitted', settlementId });
+    const { settlementId, isVerified } = req.body;
+    try {
+        // TODO: Interact with SettlementVerificationRegistry contract
+        res.status(200).json({ message: 'Verification updated', settlementId });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.get('/settlement/:id', async (req, res) => {
     const { id } = req.params;
-    // TODO: Fetch settlement data from contract
-    res.status(200).json({ id, status: 'pending' });
+    try {
+        // TODO: Fetch settlement data from contract
+        res.status(200).json({ id, status: 'placeholder' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.post('/anchor', async (req, res) => {
-    const { settlementId, assetContract, amount } = req.body;
-    // TODO: Call SettlementAnchor.lockAsset
-    res.status(200).json({ message: 'Asset anchored', settlementId });
+    const { lockId, amount, assetType } = req.body;
+    try {
+        // TODO: Interact with SettlementAnchor contract
+        res.status(200).json({ message: 'Asset anchored', lockId });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`API running on port ${PORT}`));
+app.listen(port, () => {
+    console.log(`API server running on port ${port}`);
+});
