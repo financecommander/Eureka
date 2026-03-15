@@ -1,40 +1,43 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import './interfaces/ISettlementAnchor.sol';
+import "./interfaces/ISettlementAnchor.sol";
+import "./interfaces/ISettlementVerificationRegistry.sol";
 
 contract SettlementAnchor is ISettlementAnchor {
-    mapping(bytes32 => AssetAnchor) public anchors;
-    address public registry;
+    ISettlementVerificationRegistry public registry;
+    mapping(bytes32 => AssetLock) public assetLocks;
     
-    modifier onlyRegistry() {
-        require(msg.sender == registry, 'Unauthorized');
+    event AssetLocked(bytes32 indexed settlementId, address asset, uint256 amount);
+    event SettlementAnchored(bytes32 indexed settlementId);
+    
+    constructor(address _registry) {
+        registry = ISettlementVerificationRegistry(_registry);
+    }
+    
+    modifier onlyRegisteredAnchor() {
+        require(registry.registeredAnchors(msg.sender), "Not registered anchor");
         _;
     }
     
-    constructor(address _registry) {
-        registry = _registry;
-    }
-    
-    function anchorSettlement(
+    function lockAsset(
         bytes32 settlementId,
-        address[] calldata assets,
-        uint256[] calldata amounts
-    ) external override onlyRegistry {
-        require(assets.length == amounts.length, 'Invalid input lengths');
-        anchors[settlementId] = AssetAnchor({
-            settlementId: settlementId,
-            assets: assets,
-            amounts: amounts,
-            locked: true
+        address asset,
+        uint256 amount
+    ) external onlyRegisteredAnchor {
+        require(registry.settlements(settlementId).status != VerificationStatus.NONE, "Settlement not found");
+        assetLocks[settlementId] = AssetLock({
+            asset: asset,
+            amount: amount,
+            isLocked: true,
+            timestamp: block.timestamp
         });
-        emit SettlementAnchored(settlementId, assets, amounts);
+        emit AssetLocked(settlementId, asset, amount);
     }
     
-    function releaseAnchor(bytes32 settlementId) external override onlyRegistry {
-        AssetAnchor storage anchor = anchors[settlementId];
-        require(anchor.locked, 'Not locked');
-        anchor.locked = false;
-        emit AnchorReleased(settlementId);
+    function anchorSettlement(bytes32 settlementId) external onlyRegisteredAnchor {
+        require(assetLocks[settlementId].isLocked, "Assets not locked");
+        registry.updateVerificationStatus(settlementId, VerificationStatus.ANCHORED);
+        emit SettlementAnchored(settlementId);
     }
 }

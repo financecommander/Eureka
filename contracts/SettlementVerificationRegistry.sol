@@ -1,62 +1,64 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import './interfaces/ISettlementVerificationRegistry.sol';
+import "./interfaces/ISettlementVerificationRegistry.sol";
+import "./interfaces/IAttorneyVerificationNode.sol";
+import "./interfaces/ISettlementAnchor.sol";
 
 contract SettlementVerificationRegistry is ISettlementVerificationRegistry {
     mapping(bytes32 => Settlement) public settlements;
-    mapping(address => bool) public authorizedVerifiers;
+    mapping(address => bool) public registeredAnchors;
+    mapping(address => bool) public registeredAttorneys;
     
-    modifier onlyVerifier() {
-        require(authorizedVerifiers[msg.sender], 'Unauthorized verifier');
+    address public owner;
+    
+    event SettlementRegistered(bytes32 indexed settlementId, address anchor);
+    event VerificationUpdated(bytes32 indexed settlementId, VerificationStatus status);
+    
+    constructor() {
+        owner = msg.sender;
+    }
+    
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not owner");
         _;
     }
     
-    constructor() {
-        authorizedVerifiers[msg.sender] = true;
+    modifier onlyRegisteredAnchor() {
+        require(registeredAnchors[msg.sender], "Not registered anchor");
+        _;
+    }
+    
+    function registerAnchor(address anchor) external onlyOwner {
+        registeredAnchors[anchor] = true;
+    }
+    
+    function registerAttorney(address attorney) external onlyOwner {
+        registeredAttorneys[attorney] = true;
     }
     
     function registerSettlement(
         bytes32 settlementId,
-        address attorney,
-        address custodian,
-        address banker,
-        uint256 amount
-    ) external override onlyVerifier {
-        require(settlements[settlementId].settlementId == bytes32(0), 'Settlement already registered');
+        address anchor,
+        bytes calldata metadata
+    ) external onlyRegisteredAnchor {
+        require(settlements[settlementId].status == VerificationStatus.NONE, "Settlement already exists");
         settlements[settlementId] = Settlement({
-            settlementId: settlementId,
-            attorney: attorney,
-            custodian: custodian,
-            banker: banker,
-            amount: amount,
-            status: VerificationStatus.Pending,
-            attorneyVerified: false,
-            custodianVerified: false,
-            bankerVerified: false
+            anchor: anchor,
+            status: VerificationStatus.REGISTERED,
+            metadata: metadata,
+            timestamp: block.timestamp
         });
-        emit SettlementRegistered(settlementId, attorney, custodian, banker, amount);
+        emit SettlementRegistered(settlementId, anchor);
     }
     
     function updateVerificationStatus(
         bytes32 settlementId,
         VerificationStatus status
-    ) external override onlyVerifier {
-        Settlement storage settlement = settlements[settlementId];
-        require(settlement.settlementId != bytes32(0), 'Settlement not found');
-        settlement.status = status;
+    ) external onlyRegisteredAnchor {
+        require(settlements[settlementId].status != VerificationStatus.NONE, "Settlement not found");
+        settlements[settlementId].status = status;
+        settlements[settlementId].timestamp = block.timestamp;
         emit VerificationUpdated(settlementId, status);
-    }
-    
-    function recordVerification(
-        bytes32 settlementId,
-        VerificationType vType
-    ) external override onlyVerifier {
-        Settlement storage settlement = settlements[settlementId];
-        require(settlement.settlementId != bytes32(0), 'Settlement not found');
-        if (vType == VerificationType.Attorney) settlement.attorneyVerified = true;
-        if (vType == VerificationType.Custodian) settlement.custodianVerified = true;
-        if (vType == VerificationType.Banker) settlement.bankerVerified = true;
-        emit VerificationRecorded(settlementId, vType);
     }
 }

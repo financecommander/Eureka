@@ -1,44 +1,45 @@
 const express = require('express');
 const ethers = require('ethers');
-require('dotenv').config();
-
 const app = express();
+const port = process.env.PORT || 3000;
+
 app.use(express.json());
 
-const provider = new ethers.providers.JsonRpcProvider(process.env.TESTNET_RPC_URL);
-const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-
-// TODO: Initialize contract instances with wallet
+// TODO: Load contract ABIs and addresses from config
 
 app.post('/verify', async (req, res) => {
+    const { settlementId, attorneyAddress } = req.body;
     try {
-        const { settlementId, verificationType } = req.body;
-        // TODO: Call appropriate contract method based on verificationType
-        res.status(200).json({ message: 'Verification recorded', settlementId });
+        // TODO: Connect to Ethereum provider
+        // TODO: Call AttorneyVerificationNode.verifySignature
+        res.json({ status: 'verified', settlementId });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
 app.get('/settlement/:id', async (req, res) => {
+    const { id } = req.params;
     try {
-        const { id } = req.params;
-        // TODO: Fetch settlement details from contract
-        res.status(200).json({ settlementId: id, status: 'Pending' });
+        // TODO: Connect to Ethereum provider
+        // TODO: Query SettlementVerificationRegistry.settlements
+        res.json({ id, status: 'REGISTERED' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
 app.post('/anchor', async (req, res) => {
+    const { settlementId, asset, amount } = req.body;
     try {
-        const { settlementId, assets, amounts } = req.body;
-        // TODO: Call SettlementAnchor contract to anchor assets
-        res.status(200).json({ message: 'Settlement anchored', settlementId });
+        // TODO: Connect to Ethereum provider
+        // TODO: Call SettlementAnchor.lockAsset and anchorSettlement
+        res.json({ status: 'anchored', settlementId });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(port, () => {
+    console.log(`API server running on port ${port}`);
+});
